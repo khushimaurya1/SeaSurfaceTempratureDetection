@@ -1,0 +1,9 @@
+Flask
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+opencv-python
+Pillow
+requests
