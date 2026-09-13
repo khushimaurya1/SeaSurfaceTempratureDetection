@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sea Surface Temperature Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2::before {
+            content: '📊';
+            font-size: 1.3rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 5px 0;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .visualization {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .visualization img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .events-list {
+            margin-top: 20px;
+        }
+
+        .event-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f56565;
+            margin-bottom: 10px;
+        }
+
+        .event-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .event-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #a0aec0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 Sea Surface Temperature Detection</h1>
+        <p class="subtitle">Analyze ocean temperature data and detect marine heatwave events</p>
+
+        <!-- Step 1: Generate Data -->
+        <div class="section">
+            <h2>Generate SST Data</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="days">Number of Days:</label>
+                    <input type="number" id="days" value="30" min="1" max="365">
+                </div>
+                <div class="control-group">
+                    <button onclick="generateData()">Generate Data</button>
+                </div>
+            </div>
+            <div id="data-message"></div>
+            <div id="data-stats" class="stats-grid" style="display: none;"></div>
+        </div>
+
+        <!-- Step 2: Analyze Temperature -->
+        <div class="section">
+            <h2>Analyze Temperature</h2>
+            <button onclick="analyzeTemperature()" id="analyze-btn" disabled>Analyze Temperature</button>
+            <div id="analyze-loading" class="loading"><div class="spinner"></div><p>Generating visualizations...</p></div>
+            <div id="analyze-message"></div>
+            <div id="temperature-viz" class="visualization"></div>
+        </div>
+
+        <!-- Step 3: Detect Events -->
+        <div class="section">
+            <h2>Detect Marine Heatwave Events</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="threshold">Temperature Threshold (°C):</label>
+                    <input type="number" id="threshold" value="25" min="0" max="40" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="duration">Minimum Duration (days):</label>
+                    <input type="number" id="duration" value="3" min="1" max="30">
+                </div>
+                <div class="control-group">
+                    <button onclick="detectEvents()" id="detect-btn" disabled>Detect Events</button>
+                </div>
+            </div>
+            <div id="events-loading" class="loading"><div class="spinner"></div><p>Detecting events...</p></div>
+            <div id="events-message"></div>
+            <div id="events-viz" class="visualization"></div>
+            <div id="events-list"></div>
+        </div>
+
+        <!-- Step 4: Thermal Image Analysis -->
+        <div class="section">
+            <h2>Thermal Image Analysis</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="hotspot_threshold">Hotspot Threshold (°C):</label>
+                    <input type="number" id="hotspot_threshold" value="15" min="-20" max="50" step="0.1">
+                </div>
+                <div class="control-group">
+                    <button onclick="analyzeThermalImage()">Analyze Thermal Image</button>
+                </div>
+            </div>
+            <div id="thermal-loading" class="loading"><div class="spinner"></div><p>Processing thermal image...</p></div>
+            <div id="thermal-message"></div>
+            <div id="thermal-viz" class="visualization"></div>
+        </div>
+
+        <footer>
+            <p>Sea Surface Temperature Detection System | Powered by Flask & Python</p>
+        </footer>
+    </div>
+
+    <script>
+        let dataGenerated = false;
+
+        async function generateData() {
+            const days = document.getElementById('days').value;
+            const messageDiv = document.getElementById('data-message');
+            const statsDiv = document.getElementById('data-stats');
+
+            messageDiv.innerHTML = '<div class="loading active"><div class="spinner"></div><p>Generating data...</p></div>';
+            statsDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/generate-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days: parseInt(days) })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.innerHTML = `<div class="message success">${data.message}</div>`;
+                    statsDiv.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-label">Mean Temp</div>
+                            <div class="stat-value">${data.stats.mean.toFixed(2)}°C</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Std Dev</div>
+                            <div class="stat-value">${data.stats.std.toFixed(2)}°C</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Min Temp</div>
+                            <div class="stat-value">${data.stats.min.toFixed(2)}°C</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Max Temp</div>
+                            <div class="stat-value">${data.stats.max.toFixed(2)}°C</div>
+                        </div>
+                    `;
+                    statsDiv.style.display = 'grid';
+                    dataGenerated = true;
+                    document.getElementById('analyze-btn').disabled = false;
+                    document.getElementById('detect-btn').disabled = false;
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function analyzeTemperature() {
+            const messageDiv = document.getElementById('analyze-message');
+            const vizDiv = document.getElementById('temperature-viz');
+            const loadingDiv = document.getElementById('analyze-loading');
+
+            messageDiv.innerHTML = '';
+            vizDiv.innerHTML = '';
+            loadingDiv.classList.add('active');
+
+            try {
+                const response = await fetch('/api/analyze-temperature', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+                loadingDiv.classList.remove('active');
+
+                if (data.success) {
+                    messageDiv.innerHTML = '<div class="message success">Analysis complete!</div>';
+                    vizDiv.innerHTML = `
+                        <h3>Temperature Map</h3>
+                        <img src="${data.visualizations.temperature_map}" alt="Temperature Map">
+                        <h3 style="margin-top: 30px;">Time Series</h3>
+                        <img src="${data.visualizations.time_series}" alt="Time Series">
+                        <h3 style="margin-top: 30px;">Temperature Anomalies</h3>
+                        <img src="${data.visualizations.anomalies}" alt="Anomalies">
+                    `;
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                loadingDiv.classList.remove('active');
+                messageDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function detectEvents() {
+            const threshold = document.getElementById('threshold').value;
+            const duration = document.getElementById('duration').value;
+            const messageDiv = document.getElementById('events-message');
+            const vizDiv = document.getElementById('events-viz');
+            const listDiv = document.getElementById('events-list');
+            const loadingDiv = document.getElementById('events-loading');
+
+            messageDiv.innerHTML = '';
+            vizDiv.innerHTML = '';
+            listDiv.innerHTML = '';
+            loadingDiv.classList.add('active');
+
+            try {
+                const response = await fetch('/api/detect-events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        threshold: parseFloat(threshold),
+                        duration: parseInt(duration)
+                    })
+                });
+
+                const data = await response.json();
+                loadingDiv.classList.remove('active');
+
+                if (data.success) {
+                    messageDiv.innerHTML = `<div class="message success">Found ${data.events.length} marine heatwave event(s)</div>`;
+                    
+                    vizDiv.innerHTML = `<img src="${data.visualization}" alt="MHW Detection">`;
+
+                    if (data.events.length > 0) {
+                        let eventsHTML = '<div class="events-list">';
+                        data.events.forEach((event, index) => {
+                            eventsHTML += `
+                                <div class="event-card">
+                                    <div class="event-title">🔥 Marine Heatwave Event ${index + 1}</div>
+                                    <div class="event-details">
+                                        <div><strong>Days:</strong> ${event.start_day} - ${event.end_day}</div>
+                                        <div><strong>Duration:</strong> ${event.duration} days</div>
+                                        <div><strong>Max Temp:</strong> ${event.max_temp.toFixed(2)}°C</div>
+                                        <div><strong>Mean Temp:</strong> ${event.mean_temp.toFixed(2)}°C</div>
+                                        <div><strong>Intensity:</strong> ${event.intensity.toFixed(2)}°C</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        eventsHTML += '</div>';
+                        listDiv.innerHTML = eventsHTML;
+                    }
+
+                    if (data.trend) {
+                        const trendMsg = data.trend.slope > 0 ? 'increasing' : 'decreasing';
+                        messageDiv.innerHTML += `<div class="message success" style="margin-top: 10px;">Temperature trend: ${trendMsg} (${(data.trend.slope * 365).toFixed(4)}°C/year)</div>`;
+                    }
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                loadingDiv.classList.remove('active');
+                messageDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function analyzeThermalImage() {
+            const hotspot_threshold = document.getElementById('hotspot_threshold').value;
+            const messageDiv = document.getElementById('thermal-message');
+            const vizDiv = document.getElementById('thermal-viz');
+            const loadingDiv = document.getElementById('thermal-loading');
+
+            messageDiv.innerHTML = '';
+            vizDiv.innerHTML = '';
+            loadingDiv.classList.add('active');
+
+            try {
+                const response = await fetch('/api/thermal-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        hotspot_threshold: parseFloat(hotspot_threshold)
+                    })
+                });
+
+                const data = await response.json();
+                loadingDiv.classList.remove('active');
+
+                if (data.success) {
+                    messageDiv.innerHTML = `
+                        <div class="message success">
+                            Analysis complete! Found ${data.hotspots_count} hotspot(s) and ${data.coldspots_count} coldspot(s)
+                        </div>
+                    `;
+                    
+                    vizDiv.innerHTML = `
+                        <h3>Temperature Distribution</h3>
+                        <img src="${data.visualizations.temperature}" alt="Temperature">
+                        <div class="stats-grid" style="margin-top: 20px;">
+                            <div class="stat-card">
+                                <div class="stat-label">Min</div>
+                                <div class="stat-value">${data.temperature_range.min.toFixed(2)}°C</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Mean</div>
+                                <div class="stat-value">${data.temperature_range.mean.toFixed(2)}°C</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Max</div>
+                                <div class="stat-value">${data.temperature_range.max.toFixed(2)}°C</div>
+                            </div>
+                        </div>
+                        <h3 style="margin-top: 30px;">Hotspot Detection</h3>
+                        <img src="${data.visualizations.hotspots}" alt="Hotspots">
+                    `;
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                loadingDiv.classList.remove('active');
+                messageDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+
+    <!-- Vercel Web Analytics -->
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
